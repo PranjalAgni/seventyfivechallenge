@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+@theme {
+	--color-accent-50: #faf5ff;
+	--color-accent-100: #f3e8ff;
+	--color-accent-200: #e9d5ff;
+	--color-accent-300: #d8b4fe;
+	--color-accent-400: #c084fc;
+	--color-accent-500: #a855f7;
+	--color-accent-600: #9333ea;
+	--color-accent-700: #7e22ce;
+
+	--color-warm-50: #fff7ed;
+	--color-warm-100: #ffedd5;
+	--color-warm-200: #fed7aa;
+	--color-warm-300: #fdba74;
+	--color-warm-400: #fb923c;
+	--color-warm-500: #f97316;
+	--color-warm-600: #ea580c;
+
+	--color-mint-50: #f0fdfa;
+	--color-mint-100: #ccfbf1;
+	--color-mint-200: #99f6e4;
+	--color-mint-300: #5eead4;
+	--color-mint-400: #2dd4bf;
+	--color-mint-500: #14b8a6;
+	--color-mint-600: #0d9488;
+
+	--color-rose-400: #fb7185;
+	--color-rose-500: #f43f5e;
+	--color-rose-600: #e11d48;
+
+	--color-sky-300: #7dd3fc;
+	--color-sky-400: #38bdf8;
+	--color-sky-500: #0ea5e9;
+
+	--color-surface: #0c0a14;
+	--color-surface-2: #16131f;
+	--color-surface-3: #221e2e;
+	--color-surface-4: #342f42;
+	--color-text: #f1eef6;
+	--color-text-muted: #8a8499;
+	--color-text-dim: #5c5672;
+
+	--font-display: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+	html {
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	body {
+		font-family: var(--font-display);
+		background-color: var(--color-surface);
+		color: var(--color-text);
+		min-height: 100dvh;
+		overflow-x: hidden;
+	}
+
+	::-webkit-scrollbar {
+		display: none;
+	}
+
+	input[type='date'] {
+		-webkit-appearance: none;
+		appearance: none;
+		position: relative;
+	}
+
+	input[type='date']::-webkit-calendar-picker-indicator {
+		filter: invert(0.6);
+	}
+}
