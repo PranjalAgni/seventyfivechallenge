@@ -5,7 +5,7 @@
 		emoji: string;
 		title: string;
 		subtitle: string;
-		field: 'steps' | 'workout' | 'noAlcohol' | 'noFriedFood';
+		field: 'steps' | 'workout' | 'noAlcohol' | 'noFriedFood' | 'notes';
 		disabled?: boolean;
 	}
 

@@ -4,6 +4,9 @@
 	import WaterTracker from '$lib/components/WaterTracker.svelte';
 	import HabitCard from '$lib/components/HabitCard.svelte';
 	import AlcoholCard from '$lib/components/AlcoholCard.svelte';
+	import StepTracker from '$lib/components/StepTracker.svelte';
+	import WorkoutCard from '$lib/components/WorkoutCard.svelte';
+	import JournalEntry from '$lib/components/JournalEntry.svelte';
 
 	const log = $derived(store.peekLog(store.today));
 	const isSunday = $derived(store.getDayOfWeek(store.today) === 0);
@@ -88,23 +91,9 @@
 	<div class="space-y-3">
 		<h2 class="text-xs font-bold uppercase tracking-widest text-text-dim">Daily Checklist</h2>
 
-		<HabitCard
-			emoji="👟"
-			title="10K Steps"
-			subtitle="Get those steps in"
-			field="steps"
-		/>
-
+		<StepTracker />
 		<WaterTracker />
-
-		<HabitCard
-			emoji="💪"
-			title="Strength Training"
-			subtitle={isSunday ? "Rest day — you've earned it!" : "Push yourself today"}
-			field="workout"
-			disabled={isSunday}
-		/>
-
+		<WorkoutCard />
 		<AlcoholCard />
 
 		<HabitCard
@@ -113,6 +102,12 @@
 			subtitle="Eat clean, feel lean"
 			field="noFriedFood"
 		/>
+	</div>
+
+	<!-- Journal -->
+	<div>
+		<h2 class="mb-3 text-xs font-bold uppercase tracking-widest text-text-dim">Reflect</h2>
+		<JournalEntry />
 	</div>
 
 	<!-- Day Complete Banner -->

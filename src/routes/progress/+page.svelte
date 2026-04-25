@@ -14,47 +14,48 @@
 	const calendarDays = $derived.by((): CalendarDay[] => {
 		const start = store.settings.startDate;
 		if (!start) return [];
-
 		const startDate = new Date(start + 'T12:00:00');
 		const today = store.today;
 		const days: CalendarDay[] = [];
-
 		for (let i = 0; i < 75; i++) {
 			const d = new Date(startDate);
 			d.setDate(d.getDate() + i);
 			const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
 			let status: CalendarDay['status'] = 'future';
-			if (dateStr === today) {
-				status = 'today';
-			} else if (dateStr < today) {
-				status = store.isDayComplete(dateStr) ? 'complete' : 'incomplete';
-			}
-
+			if (dateStr === today) status = 'today';
+			else if (dateStr < today) status = store.isDayComplete(dateStr) ? 'complete' : 'incomplete';
 			days.push({ date: dateStr, dayNum: i + 1, status });
 		}
 		return days;
 	});
 
+	const weeklyData = $derived(store.getWeeklyCompletion());
+	const habitStats = $derived(store.getHabitStats());
+	const workoutBreakdown = $derived(store.getWorkoutBreakdown());
+
+	const totalSteps = $derived(store.totalStepCount);
+	const avgSteps = $derived.by(() => {
+		const logs = Object.values(allLogs).filter(l => l.stepCount > 0);
+		if (logs.length === 0) return 0;
+		return Math.round(logs.reduce((s, l) => s + l.stepCount, 0) / logs.length);
+	});
+
 	const stats = $derived.by(() => {
 		const logs = Object.values(allLogs);
-		let totalSteps = 0;
 		let totalWater = 0;
 		let totalWorkouts = 0;
-
 		for (const log of logs) {
-			if (log.steps) totalSteps++;
 			totalWater += log.water;
 			if (log.workout) totalWorkouts++;
 		}
-
-		return {
-			totalSteps,
-			totalWater: (totalWater * 0.25).toFixed(1),
-			totalWorkouts,
-			daysTracked: logs.length
-		};
+		return { totalWater: (totalWater * 0.25).toFixed(1), totalWorkouts, daysTracked: logs.length };
 	});
+
+	function formatNum(n: number): string {
+		if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+		if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'K';
+		return String(n);
+	}
 </script>
 
 <div class="space-y-6 pt-2">
@@ -76,11 +77,11 @@
 	<div class="grid grid-cols-2 gap-3">
 		<div class="rounded-xl bg-surface-2 p-4 text-center">
 			<p class="text-2xl font-black text-warm-400">🔥 {store.streak}</p>
-			<p class="text-xs text-text-muted">Day Streak</p>
+			<p class="text-xs text-text-muted">Current Streak</p>
 		</div>
 		<div class="rounded-xl bg-surface-2 p-4 text-center">
-			<p class="text-2xl font-black text-accent-400">👟 {stats.totalSteps}</p>
-			<p class="text-xs text-text-muted">10K Step Days</p>
+			<p class="text-2xl font-black text-accent-400">⚡ {store.bestStreak}</p>
+			<p class="text-xs text-text-muted">Best Streak</p>
 		</div>
 		<div class="rounded-xl bg-surface-2 p-4 text-center">
 			<p class="text-2xl font-black text-sky-400">💧 {stats.totalWater}L</p>
@@ -91,6 +92,99 @@
 			<p class="text-xs text-text-muted">Workouts Done</p>
 		</div>
 	</div>
+
+	<!-- Step Stats -->
+	{#if totalSteps > 0}
+		<div class="rounded-2xl bg-surface-2 p-4">
+			<h2 class="mb-3 text-xs font-bold uppercase tracking-widest text-text-dim">Steps</h2>
+			<div class="flex items-center justify-around">
+				<div class="text-center">
+					<p class="text-xl font-black text-accent-400">👟 {formatNum(totalSteps)}</p>
+					<p class="text-[10px] text-text-muted">Total Steps</p>
+				</div>
+				<div class="h-8 w-px bg-surface-3"></div>
+				<div class="text-center">
+					<p class="text-xl font-black text-accent-300">{formatNum(avgSteps)}</p>
+					<p class="text-[10px] text-text-muted">Avg / Day</p>
+				</div>
+				<div class="h-8 w-px bg-surface-3"></div>
+				<div class="text-center">
+					<p class="text-xl font-black text-warm-400">{formatNum(Math.round(totalSteps * 0.0008))}</p>
+					<p class="text-[10px] text-text-muted">km walked</p>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Weekly Chart -->
+	{#if weeklyData.length > 0}
+		<div>
+			<h2 class="mb-3 text-xs font-bold uppercase tracking-widest text-text-dim">Weekly Progress</h2>
+			<div class="flex items-end gap-1.5" style="height: 120px;">
+				{#each weeklyData as week}
+					{@const pct = week.total > 0 ? (week.completed / week.total) * 100 : 0}
+					<div class="flex flex-1 flex-col items-center gap-1">
+						<span class="text-[9px] font-bold text-text-muted">{Math.round(pct)}%</span>
+						<div class="w-full rounded-t-md bg-surface-3" style="height: 90px;">
+							<div class="flex h-full flex-col justify-end">
+								<div
+									class="w-full rounded-t-md transition-all duration-500
+										{pct === 100 ? 'bg-mint-500' : pct >= 70 ? 'bg-accent-500' : pct >= 40 ? 'bg-warm-400' : 'bg-rose-400'}"
+									style="height: {pct}%;"
+								></div>
+							</div>
+						</div>
+						<span class="text-[9px] text-text-dim">W{week.week}</span>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
+	<!-- Habit Breakdown -->
+	{#if habitStats.length > 0}
+		<div>
+			<h2 class="mb-3 text-xs font-bold uppercase tracking-widest text-text-dim">Habit Breakdown</h2>
+			<div class="space-y-3">
+				{#each habitStats as habit}
+					{@const pct = habit.total > 0 ? Math.round((habit.completed / habit.total) * 100) : 0}
+					<div>
+						<div class="mb-1 flex items-center justify-between">
+							<span class="text-sm font-semibold text-text">
+								{habit.emoji} {habit.name}
+							</span>
+							<span class="text-xs font-bold {pct >= 80 ? 'text-mint-400' : pct >= 50 ? 'text-warm-400' : 'text-rose-400'}">
+								{pct}%
+							</span>
+						</div>
+						<div class="h-2 w-full overflow-hidden rounded-full bg-surface-3">
+							<div
+								class="h-full rounded-full transition-all duration-500
+									{pct >= 80 ? 'bg-mint-500' : pct >= 50 ? 'bg-warm-400' : 'bg-rose-400'}"
+								style="width: {pct}%"
+							></div>
+						</div>
+						<p class="mt-0.5 text-[10px] text-text-dim">{habit.completed}/{habit.total} days</p>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
+	<!-- Workout Split -->
+	{#if workoutBreakdown.length > 0}
+		<div>
+			<h2 class="mb-3 text-xs font-bold uppercase tracking-widest text-text-dim">Workout Split</h2>
+			<div class="flex flex-wrap gap-2">
+				{#each workoutBreakdown as item}
+					<div class="rounded-xl bg-surface-2 px-3 py-2 text-center">
+						<p class="text-lg font-black text-accent-400">{item.count}</p>
+						<p class="text-[10px] text-text-muted">{item.tag}</p>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<!-- 75-Day Calendar Grid -->
 	<div>

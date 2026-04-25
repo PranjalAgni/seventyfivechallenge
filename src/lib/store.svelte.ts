@@ -1,13 +1,20 @@
 const STORAGE_KEY = '75medium_data';
 const SETTINGS_KEY = '75medium_settings';
 
+export type WorkoutTag = 'Push' | 'Pull' | 'Legs' | 'Cardio' | 'Yoga' | 'HIIT' | 'Core' | 'Sport' | 'Other';
+
+export const WORKOUT_TAGS: WorkoutTag[] = ['Push', 'Pull', 'Legs', 'Cardio', 'Yoga', 'HIIT', 'Core', 'Sport', 'Other'];
+
 export interface DayLog {
 	date: string;
 	steps: boolean;
+	stepCount: number;
 	water: number;
 	workout: boolean;
+	workoutType: WorkoutTag | '';
 	noAlcohol: boolean;
 	noFriedFood: boolean;
+	notes: string;
 }
 
 export interface Settings {
@@ -28,17 +35,40 @@ function getDayOfWeek(dateStr: string): number {
 
 const DEFAULT_LOG: Omit<DayLog, 'date'> = {
 	steps: false,
+	stepCount: 0,
 	water: 0,
 	workout: false,
+	workoutType: '',
 	noAlcohol: true,
-	noFriedFood: true
+	noFriedFood: true,
+	notes: ''
 };
+
+function migrateLog(raw: any): DayLog {
+	return {
+		date: raw.date ?? '',
+		steps: raw.steps ?? false,
+		stepCount: raw.stepCount ?? 0,
+		water: raw.water ?? 0,
+		workout: raw.workout ?? false,
+		workoutType: raw.workoutType ?? '',
+		noAlcohol: raw.noAlcohol ?? true,
+		noFriedFood: raw.noFriedFood ?? true,
+		notes: raw.notes ?? ''
+	};
+}
 
 function loadData(): Record<string, DayLog> {
 	if (typeof window === 'undefined') return {};
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
-		return raw ? JSON.parse(raw) : {};
+		if (!raw) return {};
+		const parsed = JSON.parse(raw);
+		const migrated: Record<string, DayLog> = {};
+		for (const [key, val] of Object.entries(parsed)) {
+			migrated[key] = migrateLog(val);
+		}
+		return migrated;
 	} catch {
 		return {};
 	}
@@ -83,6 +113,11 @@ function createStore() {
 	function updateLog(date: string, updates: Partial<DayLog>) {
 		const log = ensureLog(date);
 		Object.assign(log, updates);
+
+		if (updates.stepCount !== undefined) {
+			log.steps = updates.stepCount >= 10000;
+		}
+
 		save();
 	}
 
@@ -150,6 +185,27 @@ function createStore() {
 		return streak;
 	}
 
+	function getBestStreak(): number {
+		const start = settings.startDate;
+		if (!start) return 0;
+		const startDate = new Date(start + 'T12:00:00');
+		const todayDate = new Date(getToday() + 'T12:00:00');
+		let best = 0;
+		let current = 0;
+		const d = new Date(startDate);
+		while (d <= todayDate) {
+			const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+			if (data[dateStr] && isDayComplete(dateStr)) {
+				current++;
+				if (current > best) best = current;
+			} else {
+				current = 0;
+			}
+			d.setDate(d.getDate() + 1);
+		}
+		return best;
+	}
+
 	function getTotalCompleteDays(): number {
 		return Object.keys(data).filter((d) => isDayComplete(d)).length;
 	}
@@ -160,6 +216,88 @@ function createStore() {
 		const today = new Date(getToday() + 'T12:00:00');
 		const diff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 		return Math.max(1, diff + 1);
+	}
+
+	function getHabitStats(): { name: string; emoji: string; completed: number; total: number }[] {
+		const start = settings.startDate;
+		if (!start) return [];
+		const startDate = new Date(start + 'T12:00:00');
+		const todayDate = new Date(getToday() + 'T12:00:00');
+
+		let totalDays = 0;
+		let stepsDone = 0;
+		let waterDone = 0;
+		let workoutDone = 0;
+		let alcoholDone = 0;
+		let foodDone = 0;
+
+		const d = new Date(startDate);
+		while (d <= todayDate) {
+			const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+			totalDays++;
+			const log = peekLog(dateStr);
+			const isSunday = getDayOfWeek(dateStr) === 0;
+			if (log.steps) stepsDone++;
+			if (log.water >= 12) waterDone++;
+			if (isSunday || log.workout) workoutDone++;
+			if (log.noAlcohol) alcoholDone++;
+			if (log.noFriedFood) foodDone++;
+			d.setDate(d.getDate() + 1);
+		}
+
+		return [
+			{ name: 'Steps', emoji: '👟', completed: stepsDone, total: totalDays },
+			{ name: 'Water', emoji: '💧', completed: waterDone, total: totalDays },
+			{ name: 'Workout', emoji: '💪', completed: workoutDone, total: totalDays },
+			{ name: 'No Alcohol', emoji: '🚫', completed: alcoholDone, total: totalDays },
+			{ name: 'Clean Eating', emoji: '🥗', completed: foodDone, total: totalDays }
+		];
+	}
+
+	function getWeeklyCompletion(): { week: number; completed: number; total: number }[] {
+		const start = settings.startDate;
+		if (!start) return [];
+		const startDate = new Date(start + 'T12:00:00');
+		const todayDate = new Date(getToday() + 'T12:00:00');
+		const weeks: { week: number; completed: number; total: number }[] = [];
+		let weekNum = 1;
+		let completed = 0;
+		let total = 0;
+
+		const d = new Date(startDate);
+		while (d <= todayDate && weekNum <= 11) {
+			const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+			total++;
+			if (data[dateStr] && isDayComplete(dateStr)) completed++;
+
+			if (total === 7) {
+				weeks.push({ week: weekNum, completed, total });
+				weekNum++;
+				completed = 0;
+				total = 0;
+			}
+			d.setDate(d.getDate() + 1);
+		}
+		if (total > 0) {
+			weeks.push({ week: weekNum, completed, total });
+		}
+		return weeks;
+	}
+
+	function getTotalStepCount(): number {
+		return Object.values(data).reduce((sum, log) => sum + (log.stepCount || 0), 0);
+	}
+
+	function getWorkoutBreakdown(): { tag: WorkoutTag | 'Rest'; count: number }[] {
+		const counts: Record<string, number> = {};
+		for (const log of Object.values(data)) {
+			if (log.workout && log.workoutType) {
+				counts[log.workoutType] = (counts[log.workoutType] || 0) + 1;
+			}
+		}
+		return Object.entries(counts)
+			.map(([tag, count]) => ({ tag: tag as WorkoutTag, count }))
+			.sort((a, b) => b.count - a.count);
 	}
 
 	function updateSettings(updates: Partial<Settings>) {
@@ -181,11 +319,17 @@ function createStore() {
 		get streak() {
 			return getStreak();
 		},
+		get bestStreak() {
+			return getBestStreak();
+		},
 		get totalComplete() {
 			return getTotalCompleteDays();
 		},
 		get dayNumber() {
 			return getDayNumber();
+		},
+		get totalStepCount() {
+			return getTotalStepCount();
 		},
 		peekLog,
 		ensureLog,
@@ -197,7 +341,10 @@ function createStore() {
 		markAlcoholDrunk,
 		updateSettings,
 		getAllLogs,
-		getDayOfWeek
+		getDayOfWeek,
+		getHabitStats,
+		getWeeklyCompletion,
+		getWorkoutBreakdown
 	};
 }
 
