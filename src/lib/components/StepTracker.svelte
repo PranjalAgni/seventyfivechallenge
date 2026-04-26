@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { store } from '$lib/store.svelte';
 
-	const log = $derived(store.peekLog(store.today));
+	interface Props {
+		date: string;
+	}
+
+	let { date }: Props = $props();
+
+	const log = $derived(store.peekLog(date));
 	const checked = $derived(log.steps);
 	const pct = $derived(Math.min(100, Math.round((log.stepCount / 10000) * 100)));
 
@@ -15,7 +21,7 @@
 
 	function commitSteps() {
 		const val = parseInt(inputValue.replace(/\D/g, ''), 10) || 0;
-		store.updateLog(store.today, { stepCount: val });
+		store.updateLog(date, { stepCount: val });
 		editing = false;
 	}
 
@@ -26,7 +32,7 @@
 
 	function quickAdd(amount: number) {
 		const current = log.stepCount || 0;
-		store.updateLog(store.today, { stepCount: current + amount });
+		store.updateLog(date, { stepCount: current + amount });
 	}
 </script>
 
@@ -64,7 +70,6 @@
 		</div>
 	</div>
 
-	<!-- Progress bar -->
 	{#if log.stepCount > 0 || editing}
 		<div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
 			<div
@@ -75,7 +80,6 @@
 		</div>
 	{/if}
 
-	<!-- Input area -->
 	{#if editing}
 		<div class="mt-3 flex items-center gap-2">
 			<input

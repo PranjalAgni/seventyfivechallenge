@@ -1,16 +1,22 @@
 <script lang="ts">
 	import { store } from '$lib/store.svelte';
 
-	const log = $derived(store.peekLog(store.today));
+	interface Props {
+		date: string;
+	}
+
+	let { date }: Props = $props();
+
+	const log = $derived(store.peekLog(date));
 	const percentage = $derived(Math.min(100, Math.round((log.water / 12) * 100)));
 	const liters = $derived((log.water * 0.25).toFixed(2));
 
 	function add() {
-		store.addWater(store.today);
+		store.addWater(date);
 	}
 
 	function remove() {
-		store.removeWater(store.today);
+		store.removeWater(date);
 	}
 </script>
 

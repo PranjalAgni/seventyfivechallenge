@@ -2,6 +2,7 @@
 	import { store } from '$lib/store.svelte';
 
 	interface Props {
+		date: string;
 		emoji: string;
 		title: string;
 		subtitle: string;
@@ -9,14 +10,14 @@
 		disabled?: boolean;
 	}
 
-	let { emoji, title, subtitle, field, disabled = false }: Props = $props();
+	let { date, emoji, title, subtitle, field, disabled = false }: Props = $props();
 
-	const log = $derived(store.peekLog(store.today));
+	const log = $derived(store.peekLog(date));
 	const checked = $derived(log[field] as boolean);
 
 	function toggle() {
 		if (disabled) return;
-		store.updateLog(store.today, { [field]: !checked });
+		store.updateLog(date, { [field]: !checked });
 	}
 </script>
 

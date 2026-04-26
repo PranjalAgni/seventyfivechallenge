@@ -1,31 +1,32 @@
 <script lang="ts">
 	import { store, WORKOUT_TAGS, type WorkoutTag } from '$lib/store.svelte';
 
-	const log = $derived(store.peekLog(store.today));
-	const isSunday = $derived(store.getDayOfWeek(store.today) === 0);
+	interface Props {
+		date: string;
+	}
+
+	let { date }: Props = $props();
+
+	const log = $derived(store.peekLog(date));
+	const isSunday = $derived(store.getDayOfWeek(date) === 0);
 	const checked = $derived(log.workout);
 	let showTags = $state(false);
 
 	function toggle() {
 		if (isSunday) return;
 		const newVal = !checked;
-		store.updateLog(store.today, { workout: newVal });
+		store.updateLog(date, { workout: newVal });
 		if (newVal && !log.workoutType) {
 			showTags = true;
 		}
 		if (!newVal) {
-			store.updateLog(store.today, { workoutType: '' });
+			store.updateLog(date, { workoutType: '' });
 			showTags = false;
 		}
 	}
 
 	function selectTag(tag: WorkoutTag) {
-		store.updateLog(store.today, { workoutType: tag, workout: true });
-		showTags = false;
-	}
-
-	function clearTag() {
-		store.updateLog(store.today, { workoutType: '' });
+		store.updateLog(date, { workoutType: tag, workout: true });
 		showTags = false;
 	}
 
@@ -79,7 +80,6 @@
 		</div>
 	</button>
 
-	<!-- Workout type tags -->
 	{#if (showTags || (checked && !log.workoutType)) && !isSunday}
 		<div class="border-t border-surface-3/50 px-4 pb-4 pt-3">
 			<p class="mb-2 text-xs font-semibold text-text-dim">What did you do?</p>

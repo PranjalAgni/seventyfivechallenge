@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { store } from '$lib/store.svelte';
 
-	const log = $derived(store.peekLog(store.today));
+	interface Props {
+		date: string;
+	}
+
+	let { date }: Props = $props();
+
+	const log = $derived(store.peekLog(date));
 	let expanded = $state(false);
 	let text = $state('');
 	let saveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -13,14 +19,14 @@
 	function onInput() {
 		if (saveTimer) clearTimeout(saveTimer);
 		saveTimer = setTimeout(() => {
-			store.updateLog(store.today, { notes: text });
+			store.updateLog(date, { notes: text });
 		}, 600);
 	}
 
 	function toggle() {
 		expanded = !expanded;
 		if (!expanded && text !== (log.notes || '')) {
-			store.updateLog(store.today, { notes: text });
+			store.updateLog(date, { notes: text });
 		}
 	}
 </script>

@@ -1,24 +1,30 @@
 <script lang="ts">
 	import { store } from '$lib/store.svelte';
 
-	const log = $derived(store.peekLog(store.today));
+	interface Props {
+		date: string;
+	}
+
+	let { date }: Props = $props();
+
+	const log = $derived(store.peekLog(date));
 	const settings = $derived(store.settings);
-	const canDrink = $derived(store.canDrinkAlcohol(store.today));
+	const canDrink = $derived(store.canDrinkAlcohol(date));
 	const isBiweekly = $derived(settings.alcoholPath === 'biweekly');
 
 	function markDrunk() {
-		store.markAlcoholDrunk(store.today);
+		store.markAlcoholDrunk(date);
 	}
 
 	function toggleNoAlcohol() {
-		store.updateLog(store.today, { noAlcohol: !log.noAlcohol });
+		store.updateLog(date, { noAlcohol: !log.noAlcohol });
 	}
 
 	function getDaysSinceLastDrink(): string {
 		if (!settings.lastAlcoholDate) return 'Never';
 		const last = new Date(settings.lastAlcoholDate + 'T12:00:00');
-		const today = new Date(store.today + 'T12:00:00');
-		const days = Math.floor((today.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
+		const sel = new Date(date + 'T12:00:00');
+		const days = Math.floor((sel.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
 		return `${days}d ago`;
 	}
 </script>

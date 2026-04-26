@@ -7,9 +7,13 @@
 	import StepTracker from '$lib/components/StepTracker.svelte';
 	import WorkoutCard from '$lib/components/WorkoutCard.svelte';
 	import JournalEntry from '$lib/components/JournalEntry.svelte';
+	import DateSwitcher from '$lib/components/DateSwitcher.svelte';
 
-	const log = $derived(store.peekLog(store.today));
-	const isSunday = $derived(store.getDayOfWeek(store.today) === 0);
+	let selectedDate = $state(store.today);
+
+	const log = $derived(store.peekLog(selectedDate));
+	const isSunday = $derived(store.getDayOfWeek(selectedDate) === 0);
+	const isToday = $derived(selectedDate === store.today);
 
 	const completedCount = $derived.by(() => {
 		let count = 0;
@@ -23,6 +27,14 @@
 
 	const todayPct = $derived(Math.round((completedCount / 5) * 100));
 	const overallPct = $derived(Math.round((store.totalComplete / 75) * 100));
+
+	const selectedDayNumber = $derived.by(() => {
+		if (!store.settings.startDate) return 1;
+		const start = new Date(store.settings.startDate + 'T12:00:00');
+		const sel = new Date(selectedDate + 'T12:00:00');
+		const diff = Math.floor((sel.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+		return Math.max(1, diff + 1);
+	});
 
 	const greeting = $derived.by(() => {
 		const hour = new Date().getHours();
@@ -58,24 +70,38 @@
 		</div>
 		<div class="flex flex-col items-end gap-0.5">
 			<span class="rounded-full bg-accent-500/15 px-3 py-1 text-xs font-bold text-accent-400">
-				Day {store.dayNumber}/75
+				Day {selectedDayNumber}/75
 			</span>
-			{#if store.streak > 0}
+			{#if store.streak > 0 && isToday}
 				<span class="text-xs font-semibold text-warm-400">🔥 {store.streak} streak</span>
 			{/if}
 		</div>
 	</div>
 
-	<!-- Motivational Quote -->
-	<div class="rounded-xl bg-linear-to-r from-accent-600/10 to-warm-500/10 px-4 py-3">
-		<p class="text-center text-sm font-medium text-text-muted italic">"{quote}"</p>
-	</div>
+	<!-- Date Switcher -->
+	<DateSwitcher {selectedDate} onchange={(d) => { selectedDate = d; }} />
 
-	<!-- Today's Progress Ring -->
+	<!-- Editing past day banner -->
+	{#if !isToday}
+		<div class="rounded-lg bg-warm-500/10 px-3 py-2 text-center text-xs font-semibold text-warm-400">
+			Editing Day {selectedDayNumber} — tap date to return to today
+		</div>
+	{/if}
+
+	<!-- Motivational Quote (only show on today) -->
+	{#if isToday}
+		<div class="rounded-xl bg-linear-to-r from-accent-600/10 to-warm-500/10 px-4 py-3">
+			<p class="text-center text-sm font-medium text-text-muted italic">"{quote}"</p>
+		</div>
+	{/if}
+
+	<!-- Day's Progress Ring -->
 	<div class="flex items-center gap-5 rounded-2xl bg-surface-2 p-5">
 		<ProgressRing percentage={todayPct} size={100} strokeWidth={7} />
 		<div class="flex-1">
-			<h2 class="text-lg font-bold text-text">Today's Progress</h2>
+			<h2 class="text-lg font-bold text-text">
+				{isToday ? "Today's Progress" : `Day ${selectedDayNumber} Progress`}
+			</h2>
 			<p class="text-sm text-text-muted">{completedCount}/5 tasks done</p>
 			<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-3">
 				<div
@@ -83,7 +109,9 @@
 					style="width: {todayPct}%"
 				></div>
 			</div>
-			<p class="mt-1 text-xs text-text-muted">{overallPct}% overall ({store.totalComplete}/75 days)</p>
+			{#if isToday}
+				<p class="mt-1 text-xs text-text-muted">{overallPct}% overall ({store.totalComplete}/75 days)</p>
+			{/if}
 		</div>
 	</div>
 
@@ -91,12 +119,13 @@
 	<div class="space-y-3">
 		<h2 class="text-xs font-bold uppercase tracking-widest text-text-dim">Daily Checklist</h2>
 
-		<StepTracker />
-		<WaterTracker />
-		<WorkoutCard />
-		<AlcoholCard />
+		<StepTracker date={selectedDate} />
+		<WaterTracker date={selectedDate} />
+		<WorkoutCard date={selectedDate} />
+		<AlcoholCard date={selectedDate} />
 
 		<HabitCard
+			date={selectedDate}
 			emoji="🥗"
 			title="No Fried Food"
 			subtitle="Eat clean, feel lean"
@@ -107,15 +136,19 @@
 	<!-- Journal -->
 	<div>
 		<h2 class="mb-3 text-xs font-bold uppercase tracking-widest text-text-dim">Reflect</h2>
-		<JournalEntry />
+		<JournalEntry date={selectedDate} />
 	</div>
 
 	<!-- Day Complete Banner -->
 	{#if todayPct === 100}
 		<div class="rounded-2xl bg-linear-to-r from-mint-500/15 to-accent-500/15 p-5 text-center ring-1 ring-mint-500/20">
 			<p class="text-3xl">🎉</p>
-			<h3 class="mt-1 text-lg font-black text-mint-400">Day Complete!</h3>
-			<p class="text-sm text-text-muted">You crushed it. See you tomorrow.</p>
+			<h3 class="mt-1 text-lg font-black text-mint-400">
+				{isToday ? 'Day Complete!' : `Day ${selectedDayNumber} Complete!`}
+			</h3>
+			<p class="text-sm text-text-muted">
+				{isToday ? 'You crushed it. See you tomorrow.' : 'Nice — all tasks logged.'}
+			</p>
 		</div>
 	{/if}
 </div>
