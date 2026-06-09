@@ -16,17 +16,12 @@
 	$effect(() => {
 		const dateParam = page.url.searchParams.get('date');
 		if (!dateParam) return;
-		// Validate YYYY-MM-DD format
-		if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
-			replaceState('/', {});
-			return;
-		}
-		// Only allow dates within the challenge range (startDate..today)
+		replaceState('/', {});
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return;
 		const start = store.settings.startDate;
 		if (start && dateParam >= start && dateParam <= store.today) {
 			selectedDate = dateParam;
 		}
-		replaceState('/', {});
 	});
 
 	const log = $derived(store.peekLog(selectedDate));
