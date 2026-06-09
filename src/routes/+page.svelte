@@ -8,8 +8,26 @@
 	import WorkoutCard from '$lib/components/WorkoutCard.svelte';
 	import JournalEntry from '$lib/components/JournalEntry.svelte';
 	import DateSwitcher from '$lib/components/DateSwitcher.svelte';
+	import { page } from '$app/state';
+	import { replaceState } from '$app/navigation';
 
 	let selectedDate = $state(store.today);
+
+	$effect(() => {
+		const dateParam = page.url.searchParams.get('date');
+		if (!dateParam) return;
+		// Validate YYYY-MM-DD format
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+			replaceState('/', {});
+			return;
+		}
+		// Only allow dates within the challenge range (startDate..today)
+		const start = store.settings.startDate;
+		if (start && dateParam >= start && dateParam <= store.today) {
+			selectedDate = dateParam;
+		}
+		replaceState('/', {});
+	});
 
 	const log = $derived(store.peekLog(selectedDate));
 	const isSunday = $derived(store.getDayOfWeek(selectedDate) === 0);
