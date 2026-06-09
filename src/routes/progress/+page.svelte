@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { store } from '$lib/store.svelte';
 	import ProgressRing from '$lib/components/ProgressRing.svelte';
+	import { goto } from '$app/navigation';
 
 	const overallPct = $derived(Math.round((store.totalComplete / 75) * 100));
 	const allLogs = $derived(store.getAllLogs());
@@ -55,6 +56,11 @@
 		if (day.completionPct >= 20) return 'bg-warm-500/60 text-white';
 		if (day.completionPct > 0) return 'bg-rose-500/40 text-white';
 		return 'bg-rose-500/20 text-text-muted';
+	}
+
+	function handleTileClick(day: CalendarDay) {
+		if (day.status === 'future') return;
+		goto(`/?date=${day.date}`);
 	}
 
 	const weeklyData = $derived(store.getWeeklyCompletion());
@@ -221,6 +227,7 @@
 			{#each calendarDays as day}
 				<div
 					class="relative flex aspect-square items-center justify-center rounded-lg text-[10px] font-bold transition-all
+					{day.status !== 'future' ? 'cursor-pointer hover:scale-110 hover:brightness-110' : ''}
 					{calendarShowCompletion
 						? getHeatmapClass(day)
 						: day.status === 'complete'
@@ -231,6 +238,10 @@
 									? 'bg-accent-500 text-white ring-2 ring-accent-300 shadow-lg shadow-accent-500/30'
 									: 'bg-surface-3 text-text-dim'}"
 					title="Day {day.dayNum} - {day.date}"
+					role={day.status !== 'future' ? 'button' : undefined}
+					tabindex={day.status !== 'future' ? 0 : undefined}
+					onclick={() => handleTileClick(day)}
+					onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTileClick(day); }}
 				>
 					{#if calendarShowCompletion}
 						{day.status === 'future' ? '' : day.completionPct + '%'}
