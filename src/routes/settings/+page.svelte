@@ -1,14 +1,27 @@
 <script lang="ts">
 	import { store } from '$lib/store.svelte';
+	import type { Features } from '$lib/store.svelte';
 
 	let name = $state(store.settings.name);
 	let startDate = $state(store.settings.startDate);
-	let alcoholPath = $state<'none' | 'biweekly'>(store.settings.alcoholPath);
+	let alcoholPath = $state<'none' | 'biweekly'>(store.settings.rules.alcohol.path);
+	let features = $state<Features>({ ...store.settings.features });
 	let saved = $state(false);
 	let showReset = $state(false);
+	let featureLabOpen = $state(false);
 
 	function save() {
-		store.updateSettings({ name, startDate, alcoholPath });
+		store.updateSettings({
+			name,
+			startDate,
+			rules: {
+				alcohol: {
+					path: alcoholPath,
+					lastDrinkDate: store.settings.rules.alcohol.lastDrinkDate
+				}
+			},
+			features
+		});
 		saved = true;
 		setTimeout(() => (saved = false), 2000);
 	}
@@ -88,6 +101,50 @@
 					</div>
 				</button>
 			</div>
+		</div>
+
+		<!-- Feature Lab -->
+		<div class="rounded-2xl bg-surface-2">
+			<button
+				onclick={() => (featureLabOpen = !featureLabOpen)}
+				class="flex w-full items-center justify-between p-4"
+			>
+				<div>
+					<p class="text-xs font-bold uppercase tracking-wider text-text-dim">Feature Lab</p>
+					<p class="text-[11px] text-text-muted">Experimental features</p>
+				</div>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="h-4 w-4 text-text-dim transition-transform duration-200 {featureLabOpen ? 'rotate-180' : ''}"
+					fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+				</svg>
+			</button>
+
+			{#if featureLabOpen}
+				<div class="space-y-2 border-t border-surface-3/50 px-4 pb-4 pt-3">
+					<button
+						onclick={() => (features.calendarShowCompletion = !features.calendarShowCompletion)}
+						class="flex w-full items-center justify-between rounded-xl p-3 transition-all
+							{features.calendarShowCompletion ? 'bg-accent-500/15 ring-1 ring-accent-500/30' : 'bg-surface-3'}"
+					>
+						<div class="text-left">
+							<p class="text-sm font-bold text-text">Show Percentage</p>
+							<p class="text-xs text-text-muted">Replace day numbers with completion % on the 75-day map</p>
+						</div>
+						<div
+							class="relative ml-3 h-6 w-11 shrink-0 rounded-full transition-colors
+								{features.calendarShowCompletion ? 'bg-accent-500' : 'bg-surface-4'}"
+						>
+							<div
+								class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform
+									{features.calendarShowCompletion ? 'translate-x-5' : 'translate-x-0.5'}"
+							></div>
+						</div>
+					</button>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Save Button -->
