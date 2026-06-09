@@ -240,8 +240,8 @@
 					title="Day {day.dayNum} - {day.date}"
 					role={day.status !== 'future' ? 'button' : undefined}
 					tabindex={day.status !== 'future' ? 0 : undefined}
-					onclick={() => handleTileClick(day)}
-					onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTileClick(day); }}
+					onclick={day.status !== 'future' ? () => handleTileClick(day) : undefined}
+					onkeydown={day.status !== 'future' ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTileClick(day); } } : undefined}
 				>
 					{#if calendarShowCompletion}
 						{day.status === 'future' ? '' : day.completionPct + '%'}
