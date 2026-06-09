@@ -17,11 +17,53 @@ export interface DayLog {
 	notes: string;
 }
 
+export interface Features {
+	calendarShowCompletion: boolean;
+}
+
 export interface Settings {
+	_v: number;
 	name: string;
 	startDate: string;
-	alcoholPath: 'none' | 'biweekly';
-	lastAlcoholDate: string | null;
+	rules: {
+		alcohol: {
+			path: 'none' | 'biweekly';
+			lastDrinkDate: string | null;
+		};
+	};
+	features: Features;
+}
+
+const CURRENT_SETTINGS_VERSION = 1;
+
+// append-only — one entry per version bump, never edit existing entries
+const migrations: Record<number, (data: any) => any> = {
+	1: (data) => ({
+		_v: 1,
+		name: data.name ?? '',
+		startDate: data.startDate ?? getToday(),
+		rules: {
+			alcohol: {
+				path: data.alcoholPath ?? 'none',
+				lastDrinkDate: data.lastAlcoholDate ?? null
+			}
+		},
+		features: {
+			calendarShowCompletion: false
+		}
+	})
+	// future versions go here:
+	// 2: (data) => ({ ...data, _v: 2, ... })
+};
+
+function runMigrations(data: any): Settings {
+	const fromVersion = data._v ?? 0;
+
+	return Object.keys(migrations)
+		.map(Number)
+		.filter(v => v > fromVersion && v <= CURRENT_SETTINGS_VERSION)
+		.sort((a, b) => a - b)
+		.reduce((state, v) => migrations[v](state), data) as Settings;
 }
 
 function getToday(): string {
@@ -75,13 +117,30 @@ function loadData(): Record<string, DayLog> {
 }
 
 function loadSettings(): Settings {
-	const fallback: Settings = { name: '', startDate: getToday(), alcoholPath: 'none', lastAlcoholDate: null };
-	if (typeof window === 'undefined') return fallback;
+	const defaultSettings: Settings = {
+		_v: CURRENT_SETTINGS_VERSION,
+		name: '',
+		startDate: getToday(),
+		rules: {
+			alcohol: { path: 'none', lastDrinkDate: null }
+		},
+		features: { calendarShowCompletion: false }
+	};
+
+	if (typeof window === 'undefined') return defaultSettings;
+
 	try {
 		const raw = localStorage.getItem(SETTINGS_KEY);
-		return raw ? JSON.parse(raw) : fallback;
+		if (!raw) return defaultSettings;
+		const parsed = JSON.parse(raw);
+		if (parsed && typeof parsed !== 'object') return defaultSettings;
+		const migrated = runMigrations(parsed);
+		if ((parsed._v ?? 0) < CURRENT_SETTINGS_VERSION) {
+			localStorage.setItem(SETTINGS_KEY, JSON.stringify(migrated));
+		}
+		return migrated;
 	} catch {
-		return fallback;
+		return defaultSettings;
 	}
 }
 
@@ -150,17 +209,18 @@ function createStore() {
 	}
 
 	function canDrinkAlcohol(date: string): boolean {
-		if (settings.alcoholPath === 'none') return false;
-		if (!settings.lastAlcoholDate) return true;
-		const last = new Date(settings.lastAlcoholDate + 'T12:00:00');
+		if (settings.rules.alcohol.path === 'none') return false;
+		if (!settings.rules.alcohol.lastDrinkDate) return true;
+		const last = new Date(settings.rules.alcohol.lastDrinkDate + 'T12:00:00');
 		const current = new Date(date + 'T12:00:00');
 		const diff = (current.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
 		return diff >= 14;
 	}
 
 	function markAlcoholDrunk(date: string) {
-		settings.lastAlcoholDate = date;
+		settings.rules.alcohol.lastDrinkDate = date;
 		const log = ensureLog(date);
+		// biweekly path: a planned drink doesn't break the streak
 		log.noAlcohol = true;
 		save();
 		saveSettings();
@@ -301,7 +361,14 @@ function createStore() {
 	}
 
 	function updateSettings(updates: Partial<Settings>) {
-		Object.assign(settings, updates);
+		const { rules, features, ...rest } = updates;
+		Object.assign(settings, rest);
+		if (rules?.alcohol) {
+			Object.assign(settings.rules.alcohol, rules.alcohol);
+		}
+		if (features) {
+			Object.assign(settings.features, features);
+		}
 		saveSettings();
 	}
 
