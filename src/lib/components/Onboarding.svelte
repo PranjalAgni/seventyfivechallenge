@@ -29,7 +29,7 @@
 		} else if (step === 2) {
 			step = 3;
 		} else {
-			store.updateSettings({ name: name.trim(), startDate, alcoholPath });
+			store.updateSettings({ name: name.trim(), startDate, rules: { alcohol: { path: alcoholPath, lastDrinkDate: null } } });
 			onComplete();
 		}
 	}

@@ -10,7 +10,7 @@
 	const log = $derived(store.peekLog(date));
 	const settings = $derived(store.settings);
 	const canDrink = $derived(store.canDrinkAlcohol(date));
-	const isBiweekly = $derived(settings.alcoholPath === 'biweekly');
+	const isBiweekly = $derived(settings.rules.alcohol.path === 'biweekly');
 
 	function markDrunk() {
 		store.markAlcoholDrunk(date);
@@ -21,8 +21,8 @@
 	}
 
 	function getDaysSinceLastDrink(): string {
-		if (!settings.lastAlcoholDate) return 'Never';
-		const last = new Date(settings.lastAlcoholDate + 'T12:00:00');
+		if (!settings.rules.alcohol.lastDrinkDate) return 'Never';
+		const last = new Date(settings.rules.alcohol.lastDrinkDate + 'T12:00:00');
 		const sel = new Date(date + 'T12:00:00');
 		const days = Math.floor((sel.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
 		return `${days}d ago`;

@@ -9,6 +9,19 @@
 		date: string;
 		dayNum: number;
 		status: 'complete' | 'incomplete' | 'future' | 'today';
+		completionPct: number;
+	}
+
+	function getDayCompletionPct(dateStr: string): number {
+		const log = store.peekLog(dateStr);
+		const isSunday = store.getDayOfWeek(dateStr) === 0;
+		let count = 0;
+		if (log.steps) count++;
+		if (log.water >= 12) count++;
+		if (isSunday || log.workout) count++;
+		if (log.noAlcohol) count++;
+		if (log.noFriedFood) count++;
+		return Math.round((count / 5) * 100);
 	}
 
 	const calendarDays = $derived.by((): CalendarDay[] => {
@@ -24,10 +37,25 @@
 			let status: CalendarDay['status'] = 'future';
 			if (dateStr === today) status = 'today';
 			else if (dateStr < today) status = store.isDayComplete(dateStr) ? 'complete' : 'incomplete';
-			days.push({ date: dateStr, dayNum: i + 1, status });
+			const completionPct = status === 'future' ? 0 : getDayCompletionPct(dateStr);
+			days.push({ date: dateStr, dayNum: i + 1, status, completionPct });
 		}
 		return days;
 	});
+
+	const calendarShowCompletion = $derived(
+		store.settings.features?.calendarShowCompletion ?? false
+	);
+
+	function getHeatmapClass(day: CalendarDay): string {
+		if (day.status === 'future') return 'bg-surface-3 text-text-dim';
+		if (day.status === 'today') return 'bg-accent-500 text-white ring-2 ring-accent-300 shadow-lg shadow-accent-500/30';
+		if (day.completionPct === 100) return 'bg-mint-500 text-white shadow-sm shadow-mint-500/20';
+		if (day.completionPct >= 60) return 'bg-warm-400 text-white';
+		if (day.completionPct >= 20) return 'bg-warm-500/60 text-white';
+		if (day.completionPct > 0) return 'bg-rose-500/40 text-white';
+		return 'bg-rose-500/20 text-text-muted';
+	}
 
 	const weeklyData = $derived(store.getWeeklyCompletion());
 	const habitStats = $derived(store.getHabitStats());
@@ -193,32 +221,53 @@
 			{#each calendarDays as day}
 				<div
 					class="relative flex aspect-square items-center justify-center rounded-lg text-[10px] font-bold transition-all
-					{day.status === 'complete'
-						? 'bg-mint-500 text-white shadow-sm shadow-mint-500/20'
-						: day.status === 'incomplete'
-							? 'bg-rose-500/50 text-white'
-							: day.status === 'today'
-								? 'bg-accent-500 text-white ring-2 ring-accent-300 shadow-lg shadow-accent-500/30'
-								: 'bg-surface-3 text-text-dim'}"
+					{calendarShowCompletion
+						? getHeatmapClass(day)
+						: day.status === 'complete'
+							? 'bg-mint-500 text-white shadow-sm shadow-mint-500/20'
+							: day.status === 'incomplete'
+								? 'bg-rose-500/50 text-white'
+								: day.status === 'today'
+									? 'bg-accent-500 text-white ring-2 ring-accent-300 shadow-lg shadow-accent-500/30'
+									: 'bg-surface-3 text-text-dim'}"
 					title="Day {day.dayNum} - {day.date}"
 				>
-					{day.dayNum}
+					{#if calendarShowCompletion}
+						{day.status === 'future' ? '' : day.completionPct + '%'}
+					{:else}
+						{day.dayNum}
+					{/if}
 				</div>
 			{/each}
 		</div>
 		<div class="mt-3 flex items-center justify-center gap-4 text-xs text-text-muted">
-			<span class="flex items-center gap-1.5">
-				<span class="inline-block h-2.5 w-2.5 rounded-sm bg-mint-500"></span> Done
-			</span>
-			<span class="flex items-center gap-1.5">
-				<span class="inline-block h-2.5 w-2.5 rounded-sm bg-rose-500/50"></span> Missed
-			</span>
-			<span class="flex items-center gap-1.5">
-				<span class="inline-block h-2.5 w-2.5 rounded-sm bg-accent-500"></span> Today
-			</span>
-			<span class="flex items-center gap-1.5">
-				<span class="inline-block h-2.5 w-2.5 rounded-sm bg-surface-3"></span> Future
-			</span>
+			{#if calendarShowCompletion}
+				<span class="flex items-center gap-1.5">
+					<span class="inline-block h-2.5 w-2.5 rounded-sm bg-mint-500"></span> 100%
+				</span>
+				<span class="flex items-center gap-1.5">
+					<span class="inline-block h-2.5 w-2.5 rounded-sm bg-warm-400"></span> 60–99%
+				</span>
+				<span class="flex items-center gap-1.5">
+					<span class="inline-block h-2.5 w-2.5 rounded-sm bg-rose-500/40"></span> &lt;60%
+				</span>
+				<span class="flex items-center gap-1.5">
+					<span class="inline-block h-2.5 w-2.5 rounded-sm bg-accent-500"></span> Today
+				</span>
+			{:else}
+				<span class="flex items-center gap-1.5">
+					<span class="inline-block h-2.5 w-2.5 rounded-sm bg-mint-500"></span> Done
+				</span>
+				<span class="flex items-center gap-1.5">
+					<span class="inline-block h-2.5 w-2.5 rounded-sm bg-rose-500/50"></span> Missed
+				</span>
+				<span class="flex items-center gap-1.5">
+					<span class="inline-block h-2.5 w-2.5 rounded-sm bg-accent-500"></span> Today
+				</span>
+				<span class="flex items-center gap-1.5">
+					<span class="inline-block h-2.5 w-2.5 rounded-sm bg-surface-3"></span> Future
+				</span>
+			{/if}
 		</div>
 	</div>
 </div>
