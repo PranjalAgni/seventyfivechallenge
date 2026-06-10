@@ -31,6 +31,7 @@
 			? current.filter((t) => t !== tag)
 			: [...current, tag];
 		store.updateLog(date, { workoutType: next, workout: true });
+		if (next.length > 0) showTags = false;
 	}
 
 	const tagEmojis: Record<WorkoutTag, string> = {
@@ -116,6 +117,14 @@
 					</button>
 				{/each}
 			</div>
+			{#if log.workoutType.length > 0}
+				<button
+					onclick={() => { showTags = false; }}
+					class="mt-3 text-xs text-text-dim underline underline-offset-2"
+				>
+					Done
+				</button>
+			{/if}
 		</div>
 	{:else if checked && log.workoutType.length > 0 && !isSunday}
 		<div class="border-t border-surface-3/50 px-4 pb-3 pt-2">
