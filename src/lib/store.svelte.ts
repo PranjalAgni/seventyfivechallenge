@@ -196,6 +196,22 @@ function createStore() {
 		}
 	}
 
+	function getDayCompletionPct(date: string): number {
+		const log = peekLog(date);
+		const isSunday = getDayOfWeek(date) === 0;
+		const stepProgress = Math.min(1, (log.stepCount || 0) / 10000);
+		const count =
+			stepProgress +
+			(log.water >= 12 ? 1 : 0) +
+			(isSunday || log.workout ? 1 : 0) +
+			(log.noAlcohol ? 1 : 0) +
+			(log.noFriedFood ? 1 : 0);
+		const pct = Math.round((count / 5) * 100);
+		// Never report 100 unless the day is actually complete — rounding can
+		// push ~9750 steps + all other habits to 100 while isDayComplete is false.
+		return isDayComplete(date) ? pct : Math.min(99, pct);
+	}
+
 	function isDayComplete(date: string): boolean {
 		const log = peekLog(date);
 		const isSunday = getDayOfWeek(date) === 0;
@@ -403,6 +419,7 @@ function createStore() {
 		updateLog,
 		addWater,
 		removeWater,
+		getDayCompletionPct,
 		isDayComplete,
 		canDrinkAlcohol,
 		markAlcoholDrunk,

@@ -38,15 +38,7 @@
 		return count;
 	});
 
-	const todayPct = $derived.by(() => {
-		const stepProgress = Math.min(1, (log.stepCount || 0) / 10000);
-		const otherCount =
-			(log.water >= 12 ? 1 : 0) +
-			(isSunday || log.workout ? 1 : 0) +
-			(log.noAlcohol ? 1 : 0) +
-			(log.noFriedFood ? 1 : 0);
-		return Math.round(((stepProgress + otherCount) / 5) * 100);
-	});
+	const todayPct = $derived(store.getDayCompletionPct(selectedDate));
 	const overallPct = $derived(Math.round((store.totalComplete / 75) * 100));
 
 	const selectedDayNumber = $derived.by(() => {

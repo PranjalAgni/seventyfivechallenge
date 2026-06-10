@@ -13,18 +13,6 @@
 		completionPct: number;
 	}
 
-	function getDayCompletionPct(dateStr: string): number {
-		const log = store.peekLog(dateStr);
-		const isSunday = store.getDayOfWeek(dateStr) === 0;
-		let count = 0;
-		if (log.steps) count++;
-		if (log.water >= 12) count++;
-		if (isSunday || log.workout) count++;
-		if (log.noAlcohol) count++;
-		if (log.noFriedFood) count++;
-		return Math.round((count / 5) * 100);
-	}
-
 	const calendarDays = $derived.by((): CalendarDay[] => {
 		const start = store.settings.startDate;
 		if (!start) return [];
@@ -38,7 +26,7 @@
 			let status: CalendarDay['status'] = 'future';
 			if (dateStr === today) status = 'today';
 			else if (dateStr < today) status = store.isDayComplete(dateStr) ? 'complete' : 'incomplete';
-			const completionPct = status === 'future' ? 0 : getDayCompletionPct(dateStr);
+			const completionPct = status === 'future' ? 0 : store.getDayCompletionPct(dateStr);
 			days.push({ date: dateStr, dayNum: i + 1, status, completionPct });
 		}
 		return days;
