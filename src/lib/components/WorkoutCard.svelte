@@ -68,17 +68,21 @@
 		<div class="flex-1">
 			<div class="flex items-center gap-2">
 				<h3 class="font-bold {checked ? 'text-mint-400' : 'text-text'}">Strength Training</h3>
-				{#if log.workoutType}
+				{#if log.workoutType.length > 0}
 					<span class="rounded-full bg-accent-500/15 px-2 py-0.5 text-[10px] font-bold text-accent-400">
-						{log.workoutType}
+						{log.workoutType.length === 1
+							? log.workoutType[0]
+							: log.workoutType.length === 2
+								? log.workoutType.join(' · ')
+								: `${log.workoutType[0]} +${log.workoutType.length - 1}`}
 					</span>
 				{/if}
 			</div>
 			<p class="text-xs text-text-muted">
 				{#if isSunday}
 					Rest day — you've earned it!
-				{:else if checked && log.workoutType}
-					{tagEmojis[log.workoutType]} {log.workoutType} day — crushed it
+				{:else if checked && log.workoutType.length > 0}
+					{selectedLabel} — crushed it
 				{:else if checked}
 					Tap below to tag your workout
 				{:else}
@@ -96,15 +100,15 @@
 		</div>
 	</button>
 
-	{#if (showTags || (checked && !log.workoutType)) && !isSunday}
+	{#if (showTags || (checked && log.workoutType.length === 0)) && !isSunday}
 		<div class="border-t border-surface-3/50 px-4 pb-4 pt-3">
 			<p class="mb-2 text-xs font-semibold text-text-dim">What did you do?</p>
 			<div class="flex flex-wrap gap-2">
 				{#each WORKOUT_TAGS as tag}
 					<button
-						onclick={() => selectTag(tag)}
+						onclick={() => toggleTag(tag)}
 						class="rounded-full px-3 py-1.5 text-xs font-bold transition-all active:scale-95
-							{log.workoutType === tag
+							{log.workoutType.includes(tag)
 								? 'bg-accent-500 text-white shadow-sm shadow-accent-500/25'
 								: 'bg-surface-3 text-text-muted'}"
 					>
@@ -113,7 +117,7 @@
 				{/each}
 			</div>
 		</div>
-	{:else if checked && log.workoutType && !isSunday}
+	{:else if checked && log.workoutType.length > 0 && !isSunday}
 		<div class="border-t border-surface-3/50 px-4 pb-3 pt-2">
 			<button
 				onclick={() => { showTags = true; }}
