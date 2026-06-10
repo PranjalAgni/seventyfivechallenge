@@ -16,24 +16,40 @@
 		if (isSunday) return;
 		const newVal = !checked;
 		store.updateLog(date, { workout: newVal });
-		if (newVal && !log.workoutType) {
+		if (newVal && log.workoutType.length === 0) {
 			showTags = true;
 		}
 		if (!newVal) {
-			store.updateLog(date, { workoutType: '' });
+			store.updateLog(date, { workoutType: [] });
 			showTags = false;
 		}
 	}
 
-	function selectTag(tag: WorkoutTag) {
-		store.updateLog(date, { workoutType: tag, workout: true });
-		showTags = false;
+	function toggleTag(tag: WorkoutTag) {
+		const current = log.workoutType;
+		const next = current.includes(tag)
+			? current.filter((t) => t !== tag)
+			: [...current, tag];
+		store.updateLog(date, { workoutType: next, workout: true });
 	}
 
 	const tagEmojis: Record<WorkoutTag, string> = {
-		Push: '🏋️', Pull: '🤸', Legs: '🦵', Cardio: '🏃',
-		Yoga: '🧘', HIIT: '⚡', Core: '🎯', Sport: '⚽', Other: '🔥'
+		CrossFit: '🏋️',
+		Running: '🏃',
+		Hyrox: '🏅',
+		Strength: '💪',
+		Cycling: '🚴',
+		Swim: '🏊',
+		Sports: '🏸',
+		Other: '🔥'
 	};
+
+	const selectedLabel = $derived.by(() => {
+		const tags = log.workoutType;
+		if (tags.length === 0) return '';
+		if (tags.length <= 2) return tags.map((t) => `${tagEmojis[t]} ${t}`).join(' · ');
+		return `${tagEmojis[tags[0]]} ${tags[0]} · ${tagEmojis[tags[1]]} ${tags[1]} +${tags.length - 2}`;
+	});
 </script>
 
 <div class="rounded-2xl transition-all duration-300
