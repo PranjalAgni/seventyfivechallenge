@@ -86,6 +86,15 @@ const DEFAULT_LOG: Omit<DayLog, 'date'> = {
 	notes: ''
 };
 
+const TAG_REMAP: Record<string, WorkoutTag> = {
+	Push: 'Strength', Pull: 'Strength', Legs: 'Strength', Core: 'Strength',
+	HIIT: 'CrossFit', Cardio: 'Running', Yoga: 'Other', Sport: 'Sports'
+};
+
+function remapTag(tag: string): WorkoutTag {
+	return TAG_REMAP[tag] ?? (WORKOUT_TAGS.includes(tag as WorkoutTag) ? (tag as WorkoutTag) : 'Other');
+}
+
 function migrateLog(raw: any): DayLog {
 	return {
 		date: raw.date ?? '',
@@ -93,7 +102,11 @@ function migrateLog(raw: any): DayLog {
 		stepCount: raw.stepCount ?? 0,
 		water: raw.water ?? 0,
 		workout: raw.workout ?? false,
-		workoutType: raw.workoutType ?? '',
+		workoutType: Array.isArray(raw.workoutType)
+			? raw.workoutType.map(remapTag)
+			: raw.workoutType
+				? [remapTag(raw.workoutType)]
+				: [],
 		noAlcohol: raw.noAlcohol ?? true,
 		noFriedFood: raw.noFriedFood ?? true,
 		notes: raw.notes ?? ''
@@ -367,8 +380,10 @@ function createStore() {
 	function getWorkoutBreakdown(): { tag: WorkoutTag | 'Rest'; count: number }[] {
 		const counts: Record<string, number> = {};
 		for (const log of Object.values(data)) {
-			if (log.workout && log.workoutType) {
-				counts[log.workoutType] = (counts[log.workoutType] || 0) + 1;
+			if (log.workout && log.workoutType && log.workoutType.length > 0) {
+				for (const tag of log.workoutType) {
+					counts[tag] = (counts[tag] || 0) + 1;
+				}
 			}
 		}
 		return Object.entries(counts)
