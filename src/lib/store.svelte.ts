@@ -377,7 +377,7 @@ function createStore() {
 		return Object.values(data).reduce((sum, log) => sum + (log.stepCount || 0), 0);
 	}
 
-	function getWorkoutBreakdown(): { tag: WorkoutTag | 'Rest'; count: number }[] {
+	function getWorkoutBreakdown(): { tag: WorkoutTag; count: number }[] {
 		const counts: Record<string, number> = {};
 		for (const log of Object.values(data)) {
 			if (log.workout && log.workoutType && log.workoutType.length > 0) {
