@@ -92,9 +92,24 @@ git commit -m "refactor: update WorkoutTag type and WORKOUT_TAGS to new sport-sp
 **Files:**
 - Modify: `src/lib/store.svelte.ts:89-101` (`migrateLog`)
 
-- [ ] **Step 1: Update `migrateLog` to handle the string→array migration**
+- [ ] **Step 1: Add `TAG_REMAP` and `remapTag` above `migrateLog`**
 
-Replace the `workoutType` line inside `migrateLog` (currently `workoutType: raw.workoutType ?? ''`):
+Insert the following just above the `migrateLog` function (around line 89):
+
+```ts
+const TAG_REMAP: Record<string, WorkoutTag> = {
+  Push: 'Strength', Pull: 'Strength', Legs: 'Strength', Core: 'Strength',
+  HIIT: 'CrossFit', Cardio: 'Running', Yoga: 'Other', Sport: 'Sports'
+};
+
+function remapTag(tag: string): WorkoutTag {
+  return TAG_REMAP[tag] ?? (WORKOUT_TAGS.includes(tag as WorkoutTag) ? (tag as WorkoutTag) : 'Other');
+}
+```
+
+- [ ] **Step 2: Update `migrateLog` to remap old tags and convert string→array**
+
+Replace the entire `migrateLog` function:
 
 ```ts
 function migrateLog(raw: any): DayLog {
@@ -105,9 +120,9 @@ function migrateLog(raw: any): DayLog {
     water: raw.water ?? 0,
     workout: raw.workout ?? false,
     workoutType: Array.isArray(raw.workoutType)
-      ? raw.workoutType
+      ? raw.workoutType.map(remapTag)
       : raw.workoutType
-        ? [raw.workoutType as WorkoutTag]
+        ? [remapTag(raw.workoutType)]
         : [],
     noAlcohol: raw.noAlcohol ?? true,
     noFriedFood: raw.noFriedFood ?? true,
@@ -116,7 +131,7 @@ function migrateLog(raw: any): DayLog {
 }
 ```
 
-- [ ] **Step 2: Verify TypeScript compiles cleanly for the store**
+- [ ] **Step 3: Verify TypeScript compiles cleanly for the store**
 
 ```bash
 npx tsc --noEmit 2>&1 | grep "store.svelte"
@@ -124,11 +139,11 @@ npx tsc --noEmit 2>&1 | grep "store.svelte"
 
 Expected: no errors on `store.svelte.ts`.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add src/lib/store.svelte.ts
-git commit -m "feat: migrate workoutType from string to WorkoutTag[] on localStorage read"
+git commit -m "feat: migrate workoutType string→array and remap old tags to new tag set"
 ```
 
 ---

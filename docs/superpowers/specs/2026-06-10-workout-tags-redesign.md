@@ -2,24 +2,24 @@
 
 ## Overview
 
-Replace the current generic bodybuilding-split tags (Push, Pull, Legs, Cardio, Yoga, HIIT, Core, Sport, Other) with a set that reflects the user's actual training (CrossFit, Running, Hyrox) plus broadly useful extras. Tags become multi-select so double-session days can be logged accurately.
+Replace the current generic bodybuilding-split tags (Push, Pull, Legs, Cardio, HIIT, Core, Other) with a set that reflects the user's actual training (CrossFit, Running, Hyrox) plus broadly useful extras. Tags become multi-select so double-session days can be logged accurately.
 
 ---
 
 ## Tag List
 
-| Tag | Emoji | Category |
-|---|---|---|
-| CrossFit | 🏋️ | Primary |
-| Running | 🏃 | Primary |
-| Hyrox | 🏅 | Primary |
-| Strength | 💪 | Extra |
-| Cycling | 🚴 | Extra |
-| Swim | 🏊 | Extra |
-| Yoga | 🧘 | Extra |
-| Other | 🔥 | Extra |
+| Tag      | Emoji | Category |
+| -------- | ----- | -------- |
+| CrossFit | 🏋️    | Primary  |
+| Running  | 🏃    | Primary  |
+| Hyrox    | 🏅    | Primary  |
+| Strength | 💪    | Extra    |
+| Cycling  | 🚴    | Extra    |
+| Swim     | 🏊    | Extra    |
+| Sports   | 🏸    | Extra    |
+| Other    | 🔥    | Extra    |
 
-8 tags total (down from 9). Removed: Push, Pull, Legs, Core, HIIT, Sport.
+8 tags total (down from 9). Removed: Push, Pull, Legs, Core, HIIT
 
 ---
 
@@ -29,12 +29,24 @@ Replace the current generic bodybuilding-split tags (Push, Pull, Legs, Cardio, Y
 
 ```ts
 export type WorkoutTag =
-  | 'CrossFit' | 'Running' | 'Hyrox'
-  | 'Strength' | 'Cycling' | 'Swim' | 'Yoga' | 'Other';
+  | 'CrossFit'
+  | 'Running'
+  | 'Hyrox'
+  | 'Strength'
+  | 'Cycling'
+  | 'Swim'
+  | 'Sports'
+  | 'Other';
 
 export const WORKOUT_TAGS: WorkoutTag[] = [
-  'CrossFit', 'Running', 'Hyrox',
-  'Strength', 'Cycling', 'Swim', 'Yoga', 'Other'
+  'CrossFit',
+  'Running',
+  'Hyrox',
+  'Strength',
+  'Cycling',
+  'Swim',
+  'Sports',
+  'Other',
 ];
 ```
 
@@ -42,20 +54,43 @@ export const WORKOUT_TAGS: WorkoutTag[] = [
 
 ### Migration
 
-Old stored data has `workoutType` as a string (or empty string). The store's `parseLog` function must migrate on read:
+Old stored data has `workoutType` as a string (or empty string). The store's `migrateLog` function must handle two things on read:
+
+1. **String → array**: wrap the value in an array.
+2. **Old tag → new tag**: remap removed tags to their closest equivalent.
+
+Tag remapping table:
+
+| Old | New |
+|---|---|
+| Push | Strength |
+| Pull | Strength |
+| Legs | Strength |
+| Core | Strength |
+| HIIT | CrossFit |
+| Cardio | Running |
+| Yoga | Other |
+| Sport | Sports |
 
 ```ts
-// if raw.workoutType is a non-empty string, wrap it in an array
-// if raw.workoutType is already an array, use as-is
-// if raw.workoutType is '' or undefined, use []
+const TAG_REMAP: Record<string, WorkoutTag> = {
+  Push: 'Strength', Pull: 'Strength', Legs: 'Strength', Core: 'Strength',
+  HIIT: 'CrossFit', Cardio: 'Running', Yoga: 'Other', Sport: 'Sports'
+};
+
+function remapTag(tag: string): WorkoutTag {
+  return TAG_REMAP[tag] ?? (WORKOUT_TAGS.includes(tag as WorkoutTag) ? tag as WorkoutTag : 'Other');
+}
+
+// in migrateLog:
 workoutType: Array.isArray(raw.workoutType)
-  ? raw.workoutType
+  ? raw.workoutType.map(remapTag)
   : raw.workoutType
-    ? [raw.workoutType]
+    ? [remapTag(raw.workoutType)]
     : []
 ```
 
-No write migration needed — arrays serialize fine to localStorage.
+No write migration needed — arrays serialize fine to localStorage. The remap runs at read time on every load until all entries have been re-saved with new values.
 
 ---
 
