@@ -3,7 +3,22 @@
 	import ProgressRing from '$lib/components/ProgressRing.svelte';
 	import { goto } from '$app/navigation';
 
-	const overallPct = $derived(Math.round((store.totalComplete / 75) * 100));
+	const hasStarted = $derived(store.today >= store.settings.startDate);
+	const dayHeadline = $derived(Math.min(store.dayNumber, 75));
+	const daysLeft = $derived(Math.max(0, 75 - store.dayNumber));
+	const ringPct = $derived(hasStarted ? Math.round((dayHeadline / 75) * 100) : 0);
+	const daysUntilStart = $derived.by(() => {
+		if (hasStarted) return 0;
+		const start = new Date(store.settings.startDate + 'T12:00:00');
+		const today = new Date(store.today + 'T12:00:00');
+		return Math.round((start.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+	});
+	const prettyStartDate = $derived(
+		new Date(store.settings.startDate + 'T12:00:00').toLocaleDateString(undefined, {
+			month: 'long',
+			day: 'numeric'
+		})
+	);
 	const allLogs = $derived(store.getAllLogs());
 
 	interface CalendarDay {
@@ -88,10 +103,15 @@
 
 	<!-- Big Progress Ring -->
 	<div class="flex flex-col items-center gap-3 rounded-2xl bg-surface-2 p-6">
-		<ProgressRing percentage={overallPct} size={140} strokeWidth={10} />
+		<ProgressRing percentage={ringPct} size={140} strokeWidth={10} />
 		<div class="text-center">
-			<p class="text-lg font-bold text-text">{store.totalComplete} / 75 days</p>
-			<p class="text-sm text-text-muted">{75 - store.totalComplete} days remaining</p>
+			{#if hasStarted}
+				<p class="text-lg font-bold text-text">{dayHeadline} / 75 days</p>
+				<p class="text-sm text-text-muted">{daysLeft} days left · {store.totalComplete} perfect days so far</p>
+			{:else}
+				<p class="text-lg font-bold text-text">Starts in {daysUntilStart} {daysUntilStart === 1 ? 'day' : 'days'}</p>
+				<p class="text-sm text-text-muted">{prettyStartDate}</p>
+			{/if}
 		</div>
 	</div>
 
