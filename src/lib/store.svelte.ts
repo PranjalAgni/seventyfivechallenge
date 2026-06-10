@@ -1,9 +1,9 @@
 const STORAGE_KEY = '75medium_data';
 const SETTINGS_KEY = '75medium_settings';
 
-export type WorkoutTag = 'Push' | 'Pull' | 'Legs' | 'Cardio' | 'Yoga' | 'HIIT' | 'Core' | 'Sport' | 'Other';
+export type WorkoutTag = 'CrossFit' | 'Running' | 'Hyrox' | 'Strength' | 'Cycling' | 'Swim' | 'Sports' | 'Other';
 
-export const WORKOUT_TAGS: WorkoutTag[] = ['Push', 'Pull', 'Legs', 'Cardio', 'Yoga', 'HIIT', 'Core', 'Sport', 'Other'];
+export const WORKOUT_TAGS: WorkoutTag[] = ['CrossFit', 'Running', 'Hyrox', 'Strength', 'Cycling', 'Swim', 'Sports', 'Other'];
 
 export interface DayLog {
 	date: string;
@@ -11,7 +11,7 @@ export interface DayLog {
 	stepCount: number;
 	water: number;
 	workout: boolean;
-	workoutType: WorkoutTag | '';
+	workoutType: WorkoutTag[];
 	noAlcohol: boolean;
 	noFriedFood: boolean;
 	notes: string;
@@ -80,7 +80,7 @@ const DEFAULT_LOG: Omit<DayLog, 'date'> = {
 	stepCount: 0,
 	water: 0,
 	workout: false,
-	workoutType: '',
+	workoutType: [],
 	noAlcohol: true,
 	noFriedFood: true,
 	notes: ''
