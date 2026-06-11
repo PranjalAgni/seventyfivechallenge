@@ -5,6 +5,7 @@
 	let name = $state(store.settings.name);
 	let startDate = $state(store.settings.startDate);
 	let alcoholPath = $state<'none' | 'biweekly'>(store.settings.rules.alcohol.path);
+	let streakThreshold = $state(store.settings.streakThreshold);
 	let features = $state<Features>({ ...store.settings.features });
 	let saved = $state(false);
 	let showReset = $state(false);
@@ -14,6 +15,7 @@
 		store.updateSettings({
 			name,
 			startDate,
+			streakThreshold,
 			rules: {
 				alcohol: {
 					path: alcoholPath,
@@ -101,6 +103,25 @@
 					</div>
 				</button>
 			</div>
+		</div>
+
+		<!-- Streak Threshold -->
+		<div class="rounded-2xl bg-surface-2 p-4">
+			<div class="mb-2 flex items-center justify-between">
+				<p class="text-xs font-bold uppercase tracking-wider text-text-dim">Streak Threshold</p>
+				<span class="text-sm font-bold text-accent-400">{streakThreshold}%</span>
+			</div>
+			<p class="mb-3 text-[11px] text-text-muted">
+				Count a day toward your streak if completion is at or above this percentage. Leave at 100% for strict mode.
+			</p>
+			<input
+				type="range"
+				min="50"
+				max="100"
+				step="1"
+				bind:value={streakThreshold}
+				class="w-full accent-accent-500"
+			/>
 		</div>
 
 		<!-- Feature Lab -->
