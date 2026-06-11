@@ -25,6 +25,7 @@ export interface Settings {
 	_v: number;
 	name: string;
 	startDate: string;
+	streakThreshold: number;
 	rules: {
 		alcohol: {
 			path: 'none' | 'biweekly';
@@ -34,7 +35,7 @@ export interface Settings {
 	features: Features;
 }
 
-const CURRENT_SETTINGS_VERSION = 1;
+const CURRENT_SETTINGS_VERSION = 2;
 
 // append-only — one entry per version bump, never edit existing entries
 const migrations: Record<number, (data: any) => any> = {
@@ -51,9 +52,8 @@ const migrations: Record<number, (data: any) => any> = {
 		features: {
 			calendarShowCompletion: false
 		}
-	})
-	// future versions go here:
-	// 2: (data) => ({ ...data, _v: 2, ... })
+	}),
+	2: (data) => ({ ...data, _v: 2, streakThreshold: 100 })
 };
 
 function runMigrations(data: any): Settings {
@@ -134,6 +134,7 @@ function loadSettings(): Settings {
 		_v: CURRENT_SETTINGS_VERSION,
 		name: '',
 		startDate: getToday(),
+		streakThreshold: 100,
 		rules: {
 			alcohol: { path: 'none', lastDrinkDate: null }
 		},
@@ -255,21 +256,31 @@ function createStore() {
 		saveSettings();
 	}
 
+	function qualifiesForStreak(date: string): boolean {
+		const threshold = settings.streakThreshold ?? 100;
+		if (threshold >= 100) return isDayComplete(date);
+		const log = peekLog(date);
+		const isSunday = getDayOfWeek(date) === 0;
+		const stepProgress = Math.min(1, (log.stepCount || 0) / 10000);
+		const count =
+			stepProgress +
+			(log.water >= 12 ? 1 : 0) +
+			(isSunday || log.workout ? 1 : 0) +
+			(log.noAlcohol ? 1 : 0) +
+			(log.noFriedFood ? 1 : 0);
+		const pct = (count / 5) * 100;
+		return pct >= threshold;
+	}
+
 	function getStreak(): number {
 		let streak = 0;
 		const today = new Date();
-		for (let i = 0; i < 75; i++) {
+		for (let i = 1; i <= 75; i++) {
 			const d = new Date(today);
 			d.setDate(d.getDate() - i);
 			const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-			if (i === 0) {
-				if (data[dateStr] && isDayComplete(dateStr)) streak++;
-				else if (!data[dateStr]) continue;
-				else break;
-			} else {
-				if (data[dateStr] && isDayComplete(dateStr)) streak++;
-				else break;
-			}
+			if (data[dateStr] && qualifiesForStreak(dateStr)) streak++;
+			else break;
 		}
 		return streak;
 	}
@@ -282,9 +293,9 @@ function createStore() {
 		let best = 0;
 		let current = 0;
 		const d = new Date(startDate);
-		while (d <= todayDate) {
+		while (d < todayDate) {
 			const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-			if (data[dateStr] && isDayComplete(dateStr)) {
+			if (data[dateStr] && qualifiesForStreak(dateStr)) {
 				current++;
 				if (current > best) best = current;
 			} else {
